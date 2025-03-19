@@ -53,5 +53,3 @@ export const AnimatedTransition: React.FC<AnimatedTransitionProps> = ({
     </AnimatePresence>
   );
 };
-
-<lov-add-dependency>framer-motion@latest</lov-add-dependency>
