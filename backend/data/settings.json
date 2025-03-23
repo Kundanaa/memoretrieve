@@ -1,0 +1,7 @@
+{
+  "chunk_size": 1000,
+  "chunk_overlap": 200,
+  "retrieval_k": 4,
+  "temperature": 0,
+  "model": "gpt-3.5-turbo-0125"
+}
