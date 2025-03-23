@@ -1,5 +1,79 @@
-
 import { Document, ChatMessage, ApiResponse, DocumentSource } from '@/types';
+
+// API base URL - update this to your actual backend URL
+const API_BASE_URL = 'http://localhost:8000';
+
+// Helper function for API requests
+const apiRequest = async <T>(
+  endpoint: string, 
+  method: string = 'GET', 
+  body?: any
+): Promise<ApiResponse<T>> => {
+  try {
+    const options: RequestInit = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+
+    if (body) {
+      if (body instanceof FormData) {
+        // Remove Content-Type header for FormData to allow browser to set it with boundary
+        delete (options.headers as Record<string, string>)['Content-Type'];
+        options.body = body;
+      } else {
+        options.body = JSON.stringify(body);
+      }
+    }
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+    const data = await response.json();
+
+    return {
+      success: response.ok && data.success,
+      data: data.data,
+      error: !response.ok || !data.success ? data.error || 'An unknown error occurred' : undefined,
+    };
+  } catch (error) {
+    console.error('API request failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'An unknown error occurred',
+    };
+  }
+};
+
+// API client for real backend
+export const api = {
+  // Document management
+  getDocuments: async (): Promise<ApiResponse<Document[]>> => {
+    return apiRequest<Document[]>('/documents');
+  },
+  
+  uploadDocument: async (file: File): Promise<ApiResponse<Document>> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return apiRequest<Document>('/documents', 'POST', formData);
+  },
+  
+  deleteDocument: async (id: string): Promise<ApiResponse<void>> => {
+    return apiRequest<void>(`/documents/${id}`, 'DELETE');
+  },
+  
+  updateDocumentSelection: async (id: string, selected: boolean): Promise<ApiResponse<Document>> => {
+    return apiRequest<Document>(`/documents/${id}/selection`, 'PUT', { selected });
+  },
+  
+  // Chat functionality
+  sendChatMessage: async (message: string): Promise<ApiResponse<ChatMessage>> => {
+    return apiRequest<ChatMessage>('/chat', 'POST', { message });
+  }
+};
+
+// Fallback to mock implementation if needed
+const useMockAPI = false; // Set to true to use mock implementation
 
 // Mock data for development
 const MOCK_DOCUMENTS: Document[] = [
@@ -57,8 +131,8 @@ const MOCK_SOURCES: Record<string, DocumentSource[]> = {
 // Simulate network delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// API client with mock implementations
-export const api = {
+// Mock API client
+const mockApi = {
   // Document management
   getDocuments: async (): Promise<ApiResponse<Document[]>> => {
     await delay(800);
@@ -143,3 +217,6 @@ export const api = {
     return { success: true, data: response };
   }
 };
+
+// Export either real or mock API
+export default useMockAPI ? mockApi : api;

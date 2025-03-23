@@ -1,69 +1,76 @@
-# Welcome to your Lovable project
 
-## Project info
+# Document Management with RAG Q&A
 
-**URL**: https://lovable.dev/projects/265722bc-0b6f-4b32-a748-e66d95b5fcd2
+A full-stack application for document management with Retrieval-Augmented Generation (RAG) for question answering.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- Document upload, management, and selection
+- Chat interface for asking questions about your documents
+- Source references for answers
+- Basic RAG implementation with document retrieval
 
-**Use Lovable**
+## Technology Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/265722bc-0b6f-4b32-a748-e66d95b5fcd2) and start prompting.
+- **Frontend**: React, Tailwind CSS, shadcn/ui
+- **Backend**: FastAPI, Python
+- **RAG**: Basic document retrieval with keyword matching (can be extended with LangChain/LlamaIndex)
 
-Changes made via Lovable will be committed automatically to this repo.
+## Getting Started
 
-**Use your preferred IDE**
+### Using Docker (Recommended)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. Make sure you have Docker and Docker Compose installed.
+2. Run the application stack:
+   ```bash
+   docker-compose up
+   ```
+3. Visit `http://localhost:3000` in your browser.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Manual Setup
 
-Follow these steps:
+#### Backend
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+3. Run the backend server:
+   ```bash
+   uvicorn main:app --reload
+   ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+#### Frontend
 
-**Edit a file directly in GitHub**
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+2. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-**Use GitHub Codespaces**
+3. Visit `http://localhost:3000` in your browser.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Development
 
-## What technologies are used for this project?
+- The backend serves as a basic RAG implementation with document storage.
+- The frontend allows document management and chat interactions.
+- Documents are stored in the `backend/data/documents` directory.
+- Document metadata is stored in `backend/data/db.json`.
 
-This project is built with .
+## Future Improvements
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/265722bc-0b6f-4b32-a748-e66d95b5fcd2) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+- Add proper document embedding and vector storage
+- Implement LangChain or LlamaIndex for advanced RAG capabilities
+- Add user authentication and document permissions
+- Implement real-time chat updates
+- Support more document types and formats
