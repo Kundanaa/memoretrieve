@@ -1,7 +1,7 @@
 import { Document, ChatMessage, ApiResponse, DocumentSource, RagSettings } from '@/types';
 
-// API base URL - update this to your actual backend URL
-const API_BASE_URL = 'http://localhost:8000';
+// API base URL - get from environment or use default
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Helper function for API requests
 const apiRequest = async <T>(
@@ -10,6 +10,8 @@ const apiRequest = async <T>(
   body?: any
 ): Promise<ApiResponse<T>> => {
   try {
+    console.log(`Making ${method} request to: ${API_BASE_URL}${endpoint}`);
+    
     const options: RequestInit = {
       method,
       headers: {
@@ -27,14 +29,76 @@ const apiRequest = async <T>(
       }
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
-    const data = await response.json();
+    // Add timeout to fetch request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    options.signal = controller.signal;
 
-    return {
-      success: response.ok && data.success,
-      data: data.data,
-      error: !response.ok || !data.success ? data.error || 'An unknown error occurred' : undefined,
-    };
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+      clearTimeout(timeoutId);
+      
+      const data = await response.json();
+      
+      return {
+        success: response.ok && data.success,
+        data: data.data,
+        error: !response.ok || !data.success ? data.error || 'An unknown error occurred' : undefined,
+      };
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error('API request failed:', error);
+      
+      // If fetch failed completely, fall back to mock data if enabled
+      if (useMockAPI) {
+        console.log('Falling back to mock API');
+        // Find the corresponding mock method
+        const mockMethod = endpoint.startsWith('/documents') 
+          ? endpoint.includes('selection') 
+            ? mockApi.updateDocumentSelection 
+            : endpoint.match(/\/documents\/[^\/]+$/) && method === 'DELETE'
+              ? mockApi.deleteDocument
+              : method === 'POST' 
+                ? mockApi.uploadDocument 
+                : mockApi.getDocuments
+          : endpoint === '/rag-settings' 
+            ? method === 'PUT' 
+              ? mockApi.updateRagSettings 
+              : mockApi.getRagSettings
+            : endpoint === '/chat' 
+              ? mockApi.sendChatMessage 
+              : null;
+        
+        if (mockMethod) {
+          // Extract the document ID from the endpoint if needed
+          const docIdMatch = endpoint.match(/\/documents\/([^\/]+)/);
+          const docId = docIdMatch ? docIdMatch[1] : '';
+          
+          if (endpoint.includes('selection') && method === 'PUT') {
+            // For document selection update
+            const selected = (body as any)?.selected;
+            return await mockMethod(docId, selected);
+          } else if (endpoint.match(/\/documents\/[^\/]+$/) && method === 'DELETE') {
+            // For document deletion
+            return await mockMethod(docId);
+          } else if (endpoint === '/documents' && method === 'POST') {
+            // For document upload
+            return await mockMethod(body.get('file'));
+          } else if (endpoint === '/rag-settings' && method === 'PUT') {
+            // For RAG settings update
+            return await mockMethod(body);
+          } else if (endpoint === '/chat') {
+            // For chat
+            return await mockMethod(body.message);
+          } else {
+            // For get requests
+            return await mockMethod();
+          }
+        }
+      }
+      
+      throw error;
+    }
   } catch (error) {
     console.error('API request failed:', error);
     return {
@@ -81,8 +145,8 @@ export const api = {
   }
 };
 
-// Fallback to mock implementation if needed
-const useMockAPI = false; // Set to true to use mock implementation
+// Set to true to use mock implementation as fallback when real API fails
+const useMockAPI = true;
 
 // Mock data for development
 const MOCK_DOCUMENTS: Document[] = [

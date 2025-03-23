@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { DocumentUploader } from '@/components/DocumentUploader';
 import { DocumentList } from '@/components/DocumentList';
@@ -7,10 +7,15 @@ import { useDocuments } from '@/hooks/useDocuments';
 import { AnimatedTransition } from '@/components/AnimatedTransition';
 import { RagSettingsDialog } from '@/components/RagSettingsDialog';
 import { Button } from '@/components/ui/button';
-import { FileText, Settings } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { FileText, Settings, AlertTriangle, ServerOff } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const DocumentPage = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [backendError, setBackendError] = useState(false);
+  const { toast } = useToast();
+  
   const {
     documents,
     loading,
@@ -18,7 +23,23 @@ const DocumentPage = () => {
     uploadDocument,
     deleteDocument,
     toggleDocumentSelection,
+    error
   } = useDocuments();
+  
+  // Show a toast when there's a backend connection error
+  useEffect(() => {
+    if (error) {
+      setBackendError(true);
+      toast({
+        title: "Backend Connection Issue",
+        description: "Using mock data. Start the backend server or check connection settings.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } else {
+      setBackendError(false);
+    }
+  }, [error, toast]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -45,6 +66,19 @@ const DocumentPage = () => {
             Upload and manage your documents for RAG-based question answering.
           </p>
         </AnimatedTransition>
+        
+        {backendError && (
+          <AnimatedTransition type="slide-up" className="mb-6">
+            <Alert variant="destructive" className="mb-6">
+              <ServerOff className="h-4 w-4 mr-2" />
+              <AlertTitle>Backend Server Unavailable</AlertTitle>
+              <AlertDescription>
+                Currently using mock data. To use real functionality, make sure the backend server is running 
+                and properly configured in the environment variables.
+              </AlertDescription>
+            </Alert>
+          </AnimatedTransition>
+        )}
         
         <AnimatedTransition type="slide-up" className="mb-8 mt-8">
           <DocumentUploader onUpload={uploadDocument} uploading={uploading} />

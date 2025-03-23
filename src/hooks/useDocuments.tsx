@@ -2,31 +2,36 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Document, ApiResponse } from '@/types';
 import { api } from '@/utils/api';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export function useDocuments() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchDocuments = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await api.getDocuments();
       if (response.success && response.data) {
         setDocuments(response.data);
       } else {
+        setError(response.error || "Unknown error");
         toast({
           title: "Error loading documents",
           description: response.error || "An unknown error occurred",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+      setError(errorMessage);
       toast({
         title: "Error loading documents",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -40,6 +45,7 @@ export function useDocuments() {
 
   const uploadDocument = useCallback(async (file: File) => {
     setUploading(true);
+    setError(null);
     try {
       const response = await api.uploadDocument(file);
       if (response.success && response.data) {
@@ -50,6 +56,7 @@ export function useDocuments() {
         });
         return response.data;
       } else {
+        setError(response.error || "Unknown error");
         toast({
           title: "Error uploading document",
           description: response.error || "An unknown error occurred",
@@ -57,10 +64,12 @@ export function useDocuments() {
         });
         return null;
       }
-    } catch (error) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+      setError(errorMessage);
       toast({
         title: "Error uploading document",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: errorMessage,
         variant: "destructive",
       });
       return null;
@@ -70,6 +79,7 @@ export function useDocuments() {
   }, [toast]);
 
   const deleteDocument = useCallback(async (id: string) => {
+    setError(null);
     try {
       const response = await api.deleteDocument(id);
       if (response.success) {
@@ -79,16 +89,19 @@ export function useDocuments() {
           description: "The document has been removed successfully.",
         });
       } else {
+        setError(response.error || "Unknown error");
         toast({
           title: "Error deleting document",
           description: response.error || "An unknown error occurred",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+      setError(errorMessage);
       toast({
         title: "Error deleting document",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -98,6 +111,7 @@ export function useDocuments() {
     const doc = documents.find(d => d.id === id);
     if (!doc) return;
     
+    setError(null);
     try {
       const response = await api.updateDocumentSelection(id, !doc.selected);
       if (response.success && response.data) {
@@ -105,16 +119,19 @@ export function useDocuments() {
           prev.map(d => d.id === id ? { ...d, selected: !d.selected } : d)
         );
       } else {
+        setError(response.error || "Unknown error");
         toast({
           title: "Error updating document",
           description: response.error || "An unknown error occurred",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+      setError(errorMessage);
       toast({
         title: "Error updating document",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -124,6 +141,7 @@ export function useDocuments() {
     documents,
     loading,
     uploading,
+    error,
     fetchDocuments,
     uploadDocument,
     deleteDocument,
