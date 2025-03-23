@@ -1,3 +1,4 @@
+
 import { Document, ChatMessage, ApiResponse, DocumentSource, RagSettings } from '@/types';
 
 // API base URL - get from environment or use default
@@ -77,22 +78,23 @@ const apiRequest = async <T>(
           if (endpoint.includes('selection') && method === 'PUT') {
             // For document selection update
             const selected = (body as any)?.selected;
-            return await mockMethod(docId, selected);
+            return await mockMethod(docId, selected) as ApiResponse<T>;
           } else if (endpoint.match(/\/documents\/[^\/]+$/) && method === 'DELETE') {
             // For document deletion
-            return await mockMethod(docId);
+            return await mockMethod(docId) as ApiResponse<T>;
           } else if (endpoint === '/documents' && method === 'POST') {
             // For document upload
-            return await mockMethod(body.get('file'));
+            const file = (body as FormData).get('file') as File;
+            return await mockMethod(file) as ApiResponse<T>;
           } else if (endpoint === '/rag-settings' && method === 'PUT') {
             // For RAG settings update
-            return await mockMethod(body);
+            return await mockMethod(body) as ApiResponse<T>;
           } else if (endpoint === '/chat') {
             // For chat
-            return await mockMethod(body.message);
+            return await mockMethod(body.message) as ApiResponse<T>;
           } else {
             // For get requests
-            return await mockMethod();
+            return await mockMethod() as ApiResponse<T>;
           }
         }
       }
