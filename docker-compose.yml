@@ -22,7 +22,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       - ./backend:/app
-      - ./backend/data:/app/data
+      #- ./backend/data:/app/data
       - backend_data:/app/data
 
 volumes:
