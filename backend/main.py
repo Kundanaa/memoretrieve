@@ -39,11 +39,26 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = Path("./data/db.json")
 VECTOR_DB_PATH = Path("./data/vectordb")
 VECTOR_DB_PATH.mkdir(parents=True, exist_ok=True)
+SETTINGS_PATH = Path("./data/settings.json")
 
 # Check for OpenAI API key
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 if not OPENAI_API_KEY:
     print("Warning: OPENAI_API_KEY not set. RAG functionality will be limited to mock responses.")
+
+# Default RAG settings
+DEFAULT_RAG_SETTINGS = {
+    "chunk_size": 1000,
+    "chunk_overlap": 200,
+    "retrieval_k": 4,
+    "temperature": 0,
+    "model": "gpt-3.5-turbo-0125"
+}
+
+# Initialize settings if file doesn't exist
+if not SETTINGS_PATH.exists():
+    with open(SETTINGS_PATH, "w") as f:
+        json.dump(DEFAULT_RAG_SETTINGS, f, indent=2)
 
 # Initialize database if it doesn't exist
 if not DB_PATH.exists():
@@ -59,6 +74,16 @@ def load_db():
 def save_db(db):
     with open(DB_PATH, "w") as f:
         json.dump(db, f, indent=2)
+
+# Load settings
+def load_settings():
+    with open(SETTINGS_PATH, "r") as f:
+        return json.load(f)
+
+# Save settings
+def save_settings(settings):
+    with open(SETTINGS_PATH, "w") as f:
+        json.dump(settings, f, indent=2)
 
 # Models
 class Document(BaseModel):
@@ -83,6 +108,13 @@ class DocumentSource(BaseModel):
     excerpts: List[str]
     relevanceScore: float
 
+class RagSettings(BaseModel):
+    chunk_size: int = Field(1000, ge=100, le=8000, description="Size of text chunks for processing")
+    chunk_overlap: int = Field(200, ge=0, le=500, description="Overlap between text chunks")
+    retrieval_k: int = Field(4, ge=1, le=20, description="Number of chunks to retrieve")
+    temperature: float = Field(0, ge=0, le=2, description="Temperature for LLM generation")
+    model: str = Field("gpt-3.5-turbo-0125", description="OpenAI model to use")
+
 # Helper function to load a document based on its type
 def load_document(file_path, file_type):
     try:
@@ -99,6 +131,9 @@ def load_document(file_path, file_type):
 # Function to process a document and add it to the vector store
 async def process_document(document_id, file_path, file_type):
     try:
+        # Load settings
+        settings = load_settings()
+        
         # Load the document
         docs = load_document(str(file_path), file_type)
         
@@ -106,10 +141,10 @@ async def process_document(document_id, file_path, file_type):
             update_document_status(document_id, "error")
             return
         
-        # Split the document into chunks
+        # Split the document into chunks using settings
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
+            chunk_size=settings["chunk_size"],
+            chunk_overlap=settings["chunk_overlap"],
             separators=["\n\n", "\n", " ", ""]
         )
         chunks = text_splitter.split_documents(docs)
@@ -154,7 +189,8 @@ def update_document_status(document_id, status):
 def get_retriever_for_selected_documents():
     if not OPENAI_API_KEY:
         return None
-        
+    
+    settings = load_settings()
     db = load_db()
     selected_docs = [doc["id"] for doc in db["documents"] if doc["selected"]]
     
@@ -176,14 +212,14 @@ def get_retriever_for_selected_documents():
             
         # If there's only one vector store, use it directly
         if len(all_vector_stores) == 1:
-            return all_vector_stores[0].as_retriever(search_kwargs={"k": 4})
+            return all_vector_stores[0].as_retriever(search_kwargs={"k": settings["retrieval_k"]})
             
         # Otherwise, merge them
         combined_db = all_vector_stores[0]
         for vs in all_vector_stores[1:]:
             combined_db.merge_from(vs)
             
-        return combined_db.as_retriever(search_kwargs={"k": 4})
+        return combined_db.as_retriever(search_kwargs={"k": settings["retrieval_k"]})
         
     except Exception as e:
         print(f"Error creating retriever: {e}")
@@ -285,10 +321,32 @@ async def update_document_selection(doc_id: str, selected: bool = Body(...)):
     save_db(db)
     return {"success": True, "data": updated_doc}
 
+@app.get("/rag-settings")
+async def get_rag_settings():
+    settings = load_settings()
+    return {"success": True, "data": settings}
+
+@app.put("/rag-settings")
+async def update_rag_settings(settings: RagSettings):
+    # Get current settings
+    current_settings = load_settings()
+    
+    # Update settings with new values
+    updated_settings = {**current_settings, **settings.dict()}
+    
+    # Save updated settings
+    save_settings(updated_settings)
+    
+    # Note: If chunk size or overlap has changed, documents may need to be reprocessed
+    # This could be added as a background task in a more advanced implementation
+    
+    return {"success": True, "data": updated_settings}
+
 @app.post("/chat")
 async def send_chat_message(message: str = Body(...)):
     try:
         db = load_db()
+        settings = load_settings()
         selected_docs = [doc for doc in db["documents"] if doc["selected"]]
         
         # If OpenAI API key is not set or there are no selected documents,
@@ -317,7 +375,10 @@ async def send_chat_message(message: str = Body(...)):
         """
         
         # Create RAG chain
-        llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0125")
+        llm = ChatOpenAI(
+            temperature=settings["temperature"], 
+            model=settings["model"]
+        )
         qa_chain = RetrievalQA.from_chain_type(
             llm=llm,
             chain_type="stuff",
@@ -389,48 +450,7 @@ async def send_chat_message(message: str = Body(...)):
 
 def generate_mock_response(message, selected_docs):
     """Generate a mock response when RAG functionality is unavailable"""
-    response_text = ""
-    sources = []
-    
-    # Simple keyword matching for demo purposes
-    if "revenue" in message.lower() or "financial" in message.lower():
-        response_text = "Based on the documents, revenue increased by 12% in 2023 compared to the previous year. The company is financially stable and planning expansion into European markets."
-        if len(selected_docs) > 0:
-            sources = [{
-                "documentId": selected_docs[0]["id"],
-                "documentName": selected_docs[0]["name"],
-                "excerpts": ["According to our financial results, revenue increased by 12% in 2023 compared to the previous year."],
-                "relevanceScore": 0.92
-            }]
-            if len(selected_docs) > 1:
-                sources.append({
-                    "documentId": selected_docs[1]["id"],
-                    "documentName": selected_docs[1]["name"], 
-                    "excerpts": ["The project timeline estimates completion within 8 months from approval."],
-                    "relevanceScore": 0.75
-                })
-    elif "project" in message.lower() or "timeline" in message.lower():
-        response_text = "According to the Project Proposal document, the project timeline estimates completion within 8 months from approval."
-        if len(selected_docs) > 0:
-            sources = [{
-                "documentId": selected_docs[0]["id"],
-                "documentName": selected_docs[0]["name"],
-                "excerpts": ["The project timeline estimates completion within 8 months from approval."],
-                "relevanceScore": 0.75
-            }]
-    else:
-        response_text = "I couldn't find specific information about that in the uploaded documents. Could you please rephrase your question or upload more relevant documents?"
-    
-    # Prepare response
-    response = {
-        "id": str(uuid.uuid4()),
-        "role": "assistant",
-        "content": response_text,
-        "timestamp": int(datetime.now().timestamp() * 1000),
-        "sources": sources
-    }
-    
-    return {"success": True, "data": response}
+    # ... keep existing code (mock response generation logic)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

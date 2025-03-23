@@ -32,6 +32,14 @@ export interface ChatSession {
   updatedAt: number;
 }
 
+export interface RagSettings {
+  chunk_size: number;
+  chunk_overlap: number;
+  retrieval_k: number;
+  temperature: number;
+  model: string;
+}
+
 export type ApiResponse<T> = {
   success: boolean;
   data?: T;

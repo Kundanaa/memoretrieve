@@ -1,4 +1,4 @@
-import { Document, ChatMessage, ApiResponse, DocumentSource } from '@/types';
+import { Document, ChatMessage, ApiResponse, DocumentSource, RagSettings } from '@/types';
 
 // API base URL - update this to your actual backend URL
 const API_BASE_URL = 'http://localhost:8000';
@@ -64,6 +64,15 @@ export const api = {
   
   updateDocumentSelection: async (id: string, selected: boolean): Promise<ApiResponse<Document>> => {
     return apiRequest<Document>(`/documents/${id}/selection`, 'PUT', { selected });
+  },
+  
+  // RAG settings
+  getRagSettings: async (): Promise<ApiResponse<RagSettings>> => {
+    return apiRequest<RagSettings>('/rag-settings');
+  },
+  
+  updateRagSettings: async (settings: Partial<RagSettings>): Promise<ApiResponse<RagSettings>> => {
+    return apiRequest<RagSettings>('/rag-settings', 'PUT', settings);
   },
   
   // Chat functionality
@@ -184,6 +193,33 @@ const mockApi = {
       return { success: true, data: doc };
     }
     return { success: false, error: 'Document not found' };
+  },
+
+  getRagSettings: async (): Promise<ApiResponse<RagSettings>> => {
+    await delay(500);
+    const mockSettings: RagSettings = {
+      chunk_size: 1000,
+      chunk_overlap: 200,
+      retrieval_k: 4,
+      temperature: 0,
+      model: 'gpt-3.5-turbo-0125',
+    };
+    return { success: true, data: mockSettings };
+  },
+
+  updateRagSettings: async (settings: Partial<RagSettings>): Promise<ApiResponse<RagSettings>> => {
+    await delay(750);
+    
+    // Simulate updating settings
+    const mockSettings: RagSettings = {
+      chunk_size: settings.chunk_size !== undefined ? settings.chunk_size : 1000,
+      chunk_overlap: settings.chunk_overlap !== undefined ? settings.chunk_overlap : 200,
+      retrieval_k: settings.retrieval_k !== undefined ? settings.retrieval_k : 4,
+      temperature: settings.temperature !== undefined ? settings.temperature : 0,
+      model: settings.model !== undefined ? settings.model : 'gpt-3.5-turbo-0125',
+    };
+    
+    return { success: true, data: mockSettings };
   },
   
   // Chat functionality
