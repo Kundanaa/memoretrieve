@@ -24,6 +24,10 @@ from langchain.prompts import PromptTemplate
 # Create FastAPI app
 app = FastAPI(title="Document RAG API")
 
+@app.get("/")
+def root():
+    return {"message": "Backend is up and running 🚀"}
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
