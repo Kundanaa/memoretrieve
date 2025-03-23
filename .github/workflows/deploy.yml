@@ -17,6 +17,11 @@ jobs:
       - name: Set up Docker
         uses: docker/setup-buildx-action@v3
 
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
       - name: Build and run containers
         run: |
           docker-compose up -d --build
@@ -27,4 +32,3 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           environment: production
           description: Deployed frontend and backend
-
