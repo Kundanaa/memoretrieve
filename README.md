@@ -88,10 +88,3 @@ A full-stack application for document management with Retrieval-Augmented Genera
 - Document embeddings are stored in the `backend/data/vectordb` directory.
 - Document metadata is stored in `backend/data/db.json`.
 
-## Future Improvements
-
-- Add user authentication and document permissions
-- Implement real-time chat updates
-- Support more document types and formats
-- Add document chunking options and chunk size configuration
-- Add pre-processing options for better document extraction
