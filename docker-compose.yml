@@ -7,7 +7,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - VITE_API_URL=http://backend:8000
+      - VITE_API_URL=http://localhost:8000
     depends_on:
       - backend
     volumes:
@@ -18,6 +18,12 @@ services:
     build: ./backend
     ports:
       - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       - ./backend:/app
       - ./backend/data:/app/data
+      - backend_data:/app/data
+
+volumes:
+  backend_data:

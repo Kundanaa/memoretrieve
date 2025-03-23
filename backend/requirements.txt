@@ -4,6 +4,11 @@ uvicorn==0.29.0
 pydantic==2.6.4
 langchain==0.1.12
 langchain-openai==0.0.8
+langchain-community==0.0.25
+langchain-text-splitters==0.0.1
+faiss-cpu==1.7.4
+tiktoken==0.6.0
 python-multipart==0.0.9
 nltk==3.8.1
 sse-starlette==2.0.0
+python-dotenv==1.0.1
